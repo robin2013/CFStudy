@@ -452,7 +452,9 @@ CF_INLINE Boolean __CFBasicHashTestEqualKey(CFConstBasicHashRef ht, uintptr_t in
     return func(in_coll_key, stack_key);
 }
 
+// 生成hash code
 CF_INLINE CFHashCode __CFBasicHashHashKey(CFConstBasicHashRef ht, uintptr_t stack_key) {
+    // 构造
     CFHashCode (*func)(uintptr_t) = (CFHashCode (*)(uintptr_t))CFBasicHashCallBackPtrs[ht->bits.__khas];
     CFHashCode hash_code = func ? func(stack_key) : stack_key;
     COCOA_HASHTABLE_HASH_KEY(ht, stack_key, hash_code);
@@ -465,30 +467,36 @@ CF_INLINE uintptr_t __CFBasicHashGetIndirectKey(CFConstBasicHashRef ht, uintptr_
     return func(coll_key);
 }
 
+// 返回指针数组第一个
 CF_INLINE CFBasicHashValue *__CFBasicHashGetValues(CFConstBasicHashRef ht) {
     return (CFBasicHashValue *)ht->pointers[0];
 }
 
+// 设置数组指针第一个
 CF_INLINE void __CFBasicHashSetValues(CFBasicHashRef ht, CFBasicHashValue *ptr) {
     __AssignWithWriteBarrier(&ht->pointers[0], ptr);
 }
-
+// 按照键的偏移量 获取keys
 CF_INLINE CFBasicHashValue *__CFBasicHashGetKeys(CFConstBasicHashRef ht) {
     return (CFBasicHashValue *)ht->pointers[ht->bits.keys_offset];
 }
 
+// 将新的key
 CF_INLINE void __CFBasicHashSetKeys(CFBasicHashRef ht, CFBasicHashValue *ptr) {
     __AssignWithWriteBarrier(&ht->pointers[ht->bits.keys_offset], ptr);
 }
 
+// 获取hash对象的数量
 CF_INLINE void *__CFBasicHashGetCounts(CFConstBasicHashRef ht) {
     return (void *)ht->pointers[ht->bits.counts_offset];
 }
 
+// 设置数量
 CF_INLINE void __CFBasicHashSetCounts(CFBasicHashRef ht, void *ptr) {
     __AssignWithWriteBarrier(&ht->pointers[ht->bits.counts_offset], ptr);
 }
 
+// 按照索引获取值
 CF_INLINE uintptr_t __CFBasicHashGetValue(CFConstBasicHashRef ht, CFIndex idx) {
     uintptr_t val = __CFBasicHashGetValues(ht)[idx].neutral;
     if (__CFBasicHashSubABZero == val) return 0UL;
@@ -549,7 +557,7 @@ CF_INLINE uintptr_t __CFBasicHashIsEmptyOrDeleted(CFConstBasicHashRef ht, CFInde
     uintptr_t stack_value = __CFBasicHashGetValues(ht)[idx].neutral;
     return (0UL == stack_value || ~0UL == stack_value);
 }
-
+// 对象是否已删除
 CF_INLINE uintptr_t __CFBasicHashIsDeleted(CFConstBasicHashRef ht, CFIndex idx) {
     uintptr_t stack_value = __CFBasicHashGetValues(ht)[idx].neutral;
     return (~0UL == stack_value);
@@ -881,6 +889,7 @@ CF_INLINE CFBasicHashBucket __CFBasicHashFindBucket(CFConstBasicHashRef ht, uint
 }
 
 CF_INLINE CFIndex __CFBasicHashFindBucket_NoCollision(CFConstBasicHashRef ht, uintptr_t stack_key, uintptr_t key_hash) {
+    // 容量为空
     if (0 == ht->bits.num_buckets_idx) {
         return kCFNotFound;
     }
@@ -1258,8 +1267,9 @@ CF_PRIVATE void CFBasicHashSetCapacity(CFBasicHashRef ht, CFIndex capacity) {
 
 static void __CFBasicHashAddValue(CFBasicHashRef ht, CFIndex bkt_idx, uintptr_t stack_key, uintptr_t stack_value) {
     ht->bits.mutations++;
+    // 当前容量 小于 已使用桶的数量+1
     if (CFBasicHashGetCapacity(ht) < ht->bits.used_buckets + 1) {
-        __CFBasicHashRehash(ht, 1);
+        __CFBasicHashRehash(ht, 1);// 扩容
         bkt_idx = __CFBasicHashFindBucket_NoCollision(ht, stack_key, 0);
     } else if (__CFBasicHashIsDeleted(ht, bkt_idx)) {
         ht->bits.deleted--;
